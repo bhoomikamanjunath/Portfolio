@@ -1,0 +1,214 @@
+name: Deploy Gatsby site to Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect package manager
+        id: detect-package-manager
+        run: |
+          if [ -f "${{ github.workspace }}/yarn.lock" ]; then
+            echo "manager=yarn" >> $GITHUB_OUTPUT
+            echo "command=install" >> $GITHUB_OUTPUT
+            exit 0
+          elif [ -f "${{ github.workspace }}/package.json" ]; then
+            echo "manager=npm" >> $GITHUB_OUTPUT
+            echo "command=ci" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo "Unable to determine package manager"
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: ${{ steps.detect-package-manager.outputs.manager }}
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+        with:
+          static_site_generator: gatsby
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            public
+            .cache
+          key: ${{ runner.os }}-gatsby-build-${{ hashFiles('public') }}
+          restore-keys: |
+            ${{ runner.os }}-gatsby-build-
+
+      - name: Install dependencies
+        run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
+
+      - name: Build with Gatsby
+        env:
+          PREFIX_PATHS: 'true'
+        run: ${{ steps.detect-package-manager.outputs.manager }} run build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+
+# --- Additional Portfolio Code ---
+# Add these components to your Gatsby project under src/components/
+
+// src/components/About.js
+import React from 'react';
+
+const About = () => {
+  return (
+    <section className="about">
+      <h2>About Me</h2>
+      <p>Hi, I'm Bhoomika Manjunath — a Business Analyst passionate about solving complex problems through data, storytelling, and systems thinking. With over two years at Tata Consultancy Services and hands-on CRM and product strategy experience, I bring empathy and structure to fast-paced teams. I recently earned my Master's in Information Technology & Management from UT Dallas and hold CSPO and Salesforce Administrator certifications. I thrive at the intersection of business, tech, and people.</p>
+    </section>
+  );
+};
+
+export default About;
+
+
+// src/components/Experience.js
+import React from 'react';
+
+const Experience = () => {
+  return (
+    <section className="experience">
+      <h2>Work Experience</h2>
+      <ul>
+        <li>
+          <h3>Tata Consultancy Services (TCS)</h3>
+          <p>Business Analyst – Telecom Domain (UK Client)</p>
+          <p>Led legacy product migration, improved order workflows, and optimized voice bundle launches using Agile and Salesforce QTC. Worked closely with cross-functional teams to deliver scalable CRM solutions.</p>
+        </li>
+        <li>
+          <h3>GoTeachInTheUSA – Capstone</h3>
+          <p>Improved lead qualification using Python and OCR, organized CRM data into actionable segments, and optimized client outreach flow in a real-world consulting setup.</p>
+        </li>
+      </ul>
+    </section>
+  );
+};
+
+export default Experience;
+
+
+// src/components/Education.js
+import React from 'react';
+
+const Education = () => {
+  return (
+    <section className="education">
+      <h2>Education</h2>
+      <ul>
+        <li>
+          <h3>The University of Texas at Dallas</h3>
+          <p>MS in Information Technology & Management – 2025</p>
+        </li>
+        <li>
+          <h3>Presidency University, India</h3>
+          <p>BTech in Computer Science – 2021</p>
+        </li>
+      </ul>
+    </section>
+  );
+};
+
+export default Education;
+
+
+// src/components/Projects.js
+import React from 'react';
+
+const projects = [
+  {
+    title: "Netflix SQL Data Analysis",
+    description:
+      "Ran 15+ SQL queries on a Netflix dataset to analyze genre distribution, Indian content patterns, and actor collaborations. Handled text parsing and cleaned comma-separated fields using STRING_TO_ARRAY and TRIM functions.",
+    tools: ["PostgreSQL", "Excel", "SQL"],
+  },
+  {
+    title: "GoTeachInTheUSA Capstone",
+    description:
+      "Automated data extraction using Python OCR, structured lead data into Excel, and improved CRM pipeline visualization for Latino business leader outreach.",
+    tools: ["Python", "OCR", "Excel"],
+  },
+  {
+    title: "SmartComms & Salesforce Integration",
+    description:
+      "Gathered requirements and mapped user stories for integrating SmartComms with Salesforce. Enabled more effective customer communication flows and e-contract automation.",
+    tools: ["Salesforce", "JIRA", "User Stories"],
+  },
+  {
+    title: "Telecom Product Migration at TCS",
+    description:
+      "Worked with UK telecom client to launch voice bundles. Led requirement sessions, documented BRDs, and supported seamless legacy product decommissioning.",
+    tools: ["Agile", "Salesforce", "Telecom"],
+  },
+  {
+    title: "BiteWise – Product Strategy",
+    description:
+      "Built a conceptual AI-powered meal planner app strategy. Defined key features, target segments, and go-to-market strategy in a marketing simulation project.",
+    tools: ["Figma", "Canva", "Product Strategy"],
+  },
+];
+
+const Projects = () => {
+  return (
+    <div className="projects">
+      <h2>Featured Projects</h2>
+      {projects.map((project, index) => (
+        <div key={index} className="project">
+          <h3>{project.title}</h3>
+          <p>{project.description}</p>
+          <ul>
+            {project.tools.map((tool, i) => (
+              <li key={i}>{tool}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default Projects;
+
